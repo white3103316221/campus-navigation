@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华南农业大学 · 校园导航系统</title>
+
+    <!-- 高德地图 JS API v2.0 -->
+    <!-- 如果地图不显示，请在高德控制台 https://console.amap.com/ 查看你的key -->
+    <!-- 如果有 "安全密钥"，取消下面一行的注释，填入你的安全密钥 -->
+    <!-- <script>AMap.securityCode = '请填入你的安全密钥';</script> -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=3c86c7130274128514b5f00c24a2da69"></script>
+    <script>
+        // 检测是否为 file:// 协议打开
+        if (location.protocol === 'file:') {
+            document.write('<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fff3cd;padding:16px;text-align:center;border-bottom:3px solid #ffc107;font-size:16px;">⚠️ 请使用 <strong>start.bat</strong> 启动服务，或访问 <strong>http://localhost:8080</strong></div>');
+        }
+    </script>
+
+    <!-- 自定义样式（高德地图会覆盖部分样式，需在之后加载） -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ===== 顶部导航栏 ===== -->
+    <header class="header">
+        <div class="header-title">
+            🌿 华农导航
+            <span>· 华南农业大学校园导览</span>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="搜索地点..." autocomplete="off">
+        </div>
+        <div class="search-results" id="search-results"></div>
+    </header>
+
+    <!-- ===== 分类筛选栏 ===== -->
+    <div class="category-bar" id="category-bar"></div>
+
+    <!-- ===== 地图容器 ===== -->
+    <div id="map"></div>
+
+    <!-- ===== 图例 ===== -->
+    <div class="map-legend" id="map-legend">
+        <div style="font-weight:600;margin-bottom:6px;font-size:13px;">📍 图例</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#e74c3c;"></span> 景点</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#2980b9;"></span> 教学楼</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#8e44ad;"></span> 图书馆</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#e67e22;"></span> 食堂</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#2c3e50;"></span> 宿舍区</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#27ae60;"></span> 运动场</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#795548;"></span> 校门</div>
+        <div class="map-legend-item"><span class="legend-dot" style="background:#00acc1;"></span> 交通</div>
+    </div>
+
+    <!-- ===== 侧边信息面板 ===== -->
+    <div class="side-panel" id="side-panel">
+
+        <!-- 欢迎面板 -->
+        <div class="panel-content" id="panel-welcome">
+            <div class="welcome-panel">
+                <div class="welcome-logo">🌿</div>
+                <div class="welcome-title">华南农业大学</div>
+                <div style="font-size:13px;color:var(--text-light);margin-bottom:8px;">
+                    South China Agricultural University
+                </div>
+                <div class="welcome-desc">
+                    🏛️ 广东省广州市天河区五山路483号<br>
+                    📐 校园面积：约 8250 亩（含教学科研基地）<br>
+                    🌸 特色：五湖四海一片林<br>
+                    <br>
+                    欢迎使用华农校园导航系统！点击地图上的标记或搜索地点，<br>
+                    探索这座百年学府的魅力。
+                </div>
+                <div class="welcome-stats">
+                    <div class="welcome-stat-item">
+                        <div class="welcome-stat-num" id="stat-poi">--</div>
+                        <div class="welcome-stat-label">兴趣点</div>
+                    </div>
+                    <div class="welcome-stat-item">
+                        <div class="welcome-stat-num" id="stat-category">--</div>
+                        <div class="welcome-stat-label">分类</div>
+                    </div>
+                    <div class="welcome-stat-item">
+                        <div class="welcome-stat-num" id="stat-roads">--</div>
+                        <div class="welcome-stat-label">道路段</div>
+                    </div>
+                </div>
+                <div class="welcome-tip">
+                    💡 <strong>使用提示：</strong>点击上方分类筛选地点，
+                    点击地图标记查看详情，使用搜索框快速定位。
+                </div>
+            </div>
+        </div>
+
+        <!-- POI 列表 -->
+        <div class="panel-content" id="panel-list" style="display:none;">
+            <div class="panel-header" style="padding:0 0 12px 0;">
+                <div class="panel-title" id="list-title">全部 (0)</div>
+            </div>
+            <div id="poi-list-container" class="poi-list"></div>
+        </div>
+
+        <!-- POI 详情 -->
+        <div class="panel-content" id="panel-detail" style="display:none;">
+            <div class="poi-detail show">
+                <div class="poi-detail-header">
+                    <div class="poi-detail-icon" id="poi-icon">🌸</div>
+                    <div>
+                        <div class="poi-detail-title" id="poi-name">地点名称</div>
+                        <div class="poi-detail-badge" id="poi-badge">分类</div>
+                    </div>
+                </div>
+
+                <div class="poi-detail-section">
+                    <div class="poi-detail-label">📖 简介</div>
+                    <div class="poi-detail-text" id="poi-desc">描述内容</div>
+                </div>
+
+                <div class="poi-detail-section poi-detail-tip" id="poi-tip">
+                    <div class="poi-detail-label">💡 小贴士</div>
+                    <div class="poi-detail-text" id="poi-tip-text">贴心提示</div>
+                </div>
+
+                <div class="poi-detail-section poi-detail-hours" id="poi-hours">
+                    <div class="poi-detail-label">🕐 开放时间</div>
+                    <div class="poi-detail-text" id="poi-hours-text">时间信息</div>
+                </div>
+
+                <div class="poi-detail-actions">
+                    <button class="btn-route" onclick="startRoute(currentPoiId)">🚶 导航到此</button>
+                    <button class="btn-route secondary" onclick="showPoiList(currentCategory)">← 返回列表</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 路径规划 -->
+        <div class="panel-content" id="panel-route">
+            <div class="panel-header" style="padding:0 0 12px 0;">
+                <div class="panel-title">🚶 路径规划</div>
+                <div class="panel-subtitle">选择终点开始规划路线</div>
+            </div>
+
+            <div class="route-selector">
+                <div class="route-select-item" style="cursor:default;">
+                    <div class="route-select-dot start"></div>
+                    <div class="route-select-info">
+                        <div class="route-select-label">起点</div>
+                        <div class="route-select-name" id="route-start">选择起点</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size:13px;font-weight:600;color:var(--text-light);margin:8px 0 4px;">
+                选择终点：
+            </div>
+            <div id="route-end-select"></div>
+
+            <div id="route-result" style="display:none;margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- 坐标转换工具（WGS-84 → GCJ-02） -->
+    <script src="js/coordtransform.js?v=2"></script>
+
+    <!-- 校园POI数据 -->
+    <script src="js/data.js?v=2"></script>
+
+    <!-- 应用逻辑（高德地图版） -->
+    <script src="js/app.js?v=2"></script>
+
+</body>
+</html>
